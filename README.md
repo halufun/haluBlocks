@@ -1,4 +1,4 @@
 # haluBlocks
 haluBlocks is a code generator made with blockly <br>
 This is NOT a scratch mod!! <br>
-(https://frogillius.github.io/haluBlocks/)[test me out (buggy)]
+https://frogillius.github.io/haluBlocks/
