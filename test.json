@@ -1,0 +1,19 @@
+{
+  "points": [
+    { "x": 20, "y": 20, "cornerRadius": 15 },
+    { "x": 150, "y": 20 },
+    { "x": 250, "y": 80, "cornerRadius": 5 },
+    { "x": 250, "y": 200 },
+    { "x": 150, "y": 200, "cornerRadius": 25 },
+    { "x": 20, "y": 150 }
+  ],
+  "stroke": "navy",
+  "fill": "lightblue",
+  "stroke-width": 3,
+  "stroke-dasharray": "8 4",
+  "stroke-linejoin": "round",
+  "opacity": 0.8,
+  "class": "my-custom-path",
+  "id": "testPathElement",
+  "closePath": true
+}
