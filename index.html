@@ -1,362 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>TurboWarp-like Blockly (Custom Generator)</title>
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <style>
-    /* ... (CSS remains the same) ... */
-    html, body {
-      height: 100%;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .main-area {
-        display: flex;
-        flex: 1;
-    }
-
-    #blocklyDiv {
-      flex: 1;
-      height: 100%;
-    }
-    #stage {
-        width: 480px;
-        height: 360px;
-        background-color: #eee;
-        border: 1px solid #ccc;
-        overflow: hidden;
-        position: relative;
-    }
-    .sprite {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      background-color: blue;
-      user-select: none;
-      cursor: grab;
-    }
-    .sprite.dragging{
-        cursor: grabbing;
-        opacity: 0.8;
-    }
-
-    #outputConsole {
-      height: 200px;
-      width: 100%;
-      border-top: 1px solid #ccc;
-      background-color: white;
-      overflow: auto;
-      font-family: monospace;
-      white-space: pre-wrap;
-    }
-    .button-bar{
-        padding: 10px;
-        background-color: #f0f0f0;
-    }
-  </style>
+    <title>SVG Path Generator</title>
+    <style>
+        body { font-family: sans-serif; }
+        textarea { width: 100%; height: 150px; box-sizing: border-box; margin-bottom: 10px; }
+        #svgOutput { border: 1px solid #ccc; margin-bottom: 10px; display: block; }
+        #svgCodeOutput { width: 100%; height: 100px; box-sizing: border-box; font-family: monospace; font-size: 12px; }
+        .input-section { margin-bottom: 20px; }
+        .svg-container { width: 400px; height: 300px; border: 1px solid #ddd; margin-bottom: 10px; }
+        .svg-container svg { width: 100%; height: 100%; }
+    </style>
 </head>
 <body>
-  <div class="button-bar">
-    <button id="runButton">Run Code</button>
-    <button id="clearButton">Clear Console</button>
-  </div>
+    <h1>SVG Path Generator</h1>
 
-  <div class="main-area">
-    <div id="blocklyDiv"></div>
-    <div id="stage"></div>
-  </div>
-  <div id="outputConsole"></div>
+    <div class="input-section">
+        <h2>Input JSON from File</h2>
+        <input type="file" id="jsonFileUpload" accept=".json">
+    </div>
 
-  <xml id="toolbox" style="display: none;">
-    <category name="Motion" colour="230">
-      <block type="controls_if"></block>
-    </category>
-    <category name="Sprites" colour="210">
-    </category>
-  </xml>
+    <div class="input-section">
+        <h2>Input JSON Manually</h2>
+        <textarea id="jsonTextInput" placeholder='Enter JSON here...'></textarea>
+    </div>
 
-  <script type="module">
-    import generator from './ext/sprites.js';
+    <button onclick="generatePath()">Generate SVG Path</button>
 
-    let workspace;
-    const stage = document.getElementById('stage');
-    const consoleContent = document.getElementById('outputConsole');
-    const sprites = {};
+    <div class="svg-container">
+        <h2>SVG Output</h2>
+        <div id="svgOutput">
+            <!-- SVG Path will be displayed here -->
+        </div>
+    </div>
 
-    function initBlockly() {
-      workspace = Blockly.inject('blocklyDiv', {
-        trashcan: true,
-        move: { scrollbars: true, drag: true, wheel: true },
-        renderer: 'zelos',
-        toolbox: document.getElementById('toolbox')
-      });
-      loadExtension(); // Load blocks
-      createInitialSprites();
-    }
+    <h2>SVG Code</h2>
+    <textarea id="svgCodeOutput" readonly placeholder="Generated SVG code will appear here"></textarea>
 
-    function setupConsoleCapture() {
-      const originalConsoleLog = console.log;
-      console.log = function(message) {
-        originalConsoleLog.apply(console, arguments);
-        const textNode = document.createTextNode(message + '\n');
-        consoleContent.appendChild(textNode);
-        consoleContent.scrollTop = consoleContent.scrollHeight;
-      };
-    }
+    <script src="./generator/coder.js"></script>
+    <script>
+        const pathGenerator = new SVGPathGenerator(); // Instantiate the class
 
-    function setupRunButton() {
-      const runButton = document.getElementById('runButton');
-      runButton.addEventListener('click', () => {
-        resetSprites();
-        const code = customGenerateCode(workspace); // Use custom generator
-        console.log("Generated Code:\n", code);
+        async function generatePath() {
+            let jsonString = "";
+            const fileUpload = document.getElementById('jsonFileUpload');
+            const textInput = document.getElementById('jsonTextInput');
+            const svgOutputDiv = document.getElementById('svgOutput');
+            const svgCodeTextarea = document.getElementById('svgCodeOutput');
 
-        const context = {
-          ...spriteFunctions,
-          console: console,
-          document: document,
-          sprites: sprites // Make sprites accessible in the generated code
-        };
-
-        try {
-          const runnableCode = new Function(...Object.keys(context), code);
-          runnableCode(...Object.values(context));
-        } catch (e) {
-          console.error("Error executing code:", e);
-        }
-      });
-    }
-
-    function setupClearButton() {
-      const clearButton = document.getElementById('clearButton');
-      clearButton.addEventListener('click', () => {
-        consoleContent.innerHTML = "";
-      });
-    }
-
-    // ... (createSprite, createInitialSprites, resetSprites, makeSpriteDraggable, spriteFunctions remain the same) ...
-    function createSprite(id, x, y, color) {
-      const sprite = document.createElement('div');
-      sprite.classList.add('sprite');
-      sprite.id = id;
-      sprite.style.left = `${x}px`;
-      sprite.style.top = `${y}px`;
-      sprite.style.backgroundColor = color || 'blue';
-      stage.appendChild(sprite);
-      sprites[id] = { element: sprite, x: x, y: y, originalX: x, originalY: y, color: color };
-      makeSpriteDraggable(sprite);
-      return sprite;
-    }
-
-    function createInitialSprites() {
-      createSprite('sprite1', 50, 50, "red");
-      createSprite('sprite2', 200, 100, "green");
-    }
-
-    function resetSprites() {
-      for (const id in sprites) {
-        const spriteData = sprites[id];
-        spriteData.x = spriteData.originalX;
-        spriteData.y = spriteData.originalY;
-        spriteData.element.style.left = `${spriteData.originalX}px`;
-        spriteData.element.style.top = `${spriteData.originalY}px`;
-      }
-    }
-
-    function makeSpriteDraggable(spriteElement) {
-      let isDragging = false;
-      let startX, startY, spriteStartX, spriteStartY;
-      spriteElement.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        spriteElement.classList.add('dragging');
-        startX = e.clientX;
-        startY = e.clientY;
-        spriteStartX = sprites[spriteElement.id].x;
-        spriteStartY = sprites[spriteElement.id].y;
-      });
-      document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        const newX = spriteStartX + dx;
-        const newY = spriteStartY + dy;
-        sprites[spriteElement.id].x = newX;
-        sprites[spriteElement.id].y = newY;
-        spriteElement.style.left = `${newX}px`;
-        spriteElement.style.top = `${newY}px`;
-      });
-      document.addEventListener('mouseup', () => {
-        isDragging = false;
-        spriteElement.classList.remove('dragging');
-      });
-    }
-
-    const spriteFunctions = {
-      moveSprite: (spriteId, x, y) => {
-        const sprite = sprites[spriteId];
-        if (sprite) {
-          sprite.x = x;
-          sprite.y = y;
-          sprite.element.style.left = `${x}px`;
-          sprite.element.style.top = `${y}px`;
-        }
-      },
-      changeSpriteX: (spriteId, dx) => {
-        const sprite = sprites[spriteId];
-        if (sprite) {
-          sprite.x += dx;
-          sprite.element.style.left = `${sprite.x}px`;
-        }
-      },
-      changeSpriteY: (spriteId, dy) => {
-        const sprite = sprites[spriteId];
-        if (sprite) {
-          sprite.y += dy;
-          sprite.element.style.top = `${sprite.y}px`;
-        }
-      },
-      setVisibility: (spriteId, visible) => {
-        const sprite = sprites[spriteId];
-        if (sprite) {
-          sprite.element.style.display = visible ? 'block' : 'none';
-        }
-      },
-    };
-
-
-    // --- Custom Code Generator ---
-    function customGenerateCode(workspace) {
-      let code = '';
-      const topBlocks = workspace.getTopBlocks(true); // Get top-level blocks
-
-      for (const block of topBlocks) {
-        code += generateCodeForBlock(block); // Recursively generate code
-      }
-
-      return code;
-    }
-
-    function generateCodeForBlock(block) {
-      let code = '';
-
-      // Handle different block types
-      switch (block.type) {
-        case 'create_sprite':
-          const id = block.getFieldValue('ID');
-          const color = block.getFieldValue('COLOR');
-          const x = block.getFieldValue('X');
-          const y = block.getFieldValue('Y');
-          code += `createSprite('${id}', ${x}, ${y}, '${color}');\n`;
-          break;
-        case 'move_sprite':
-          const spriteIdMove = block.getFieldValue('SPRITE_ID');
-          const xMove = block.getFieldValue('X');
-          const yMove = block.getFieldValue('Y');
-          code += `spriteFunctions.moveSprite('${spriteIdMove}', ${xMove}, ${yMove});\n`;
-          break;
-        case 'change_sprite_x':
-          const spriteIdChangeX = block.getFieldValue('SPRITE_ID');
-          const dx = block.getFieldValue('DX');
-          code += `spriteFunctions.changeSpriteX('${spriteIdChangeX}', ${dx});\n`;
-          break;
-        case 'change_sprite_y':
-          const spriteIdChangeY = block.getFieldValue('SPRITE_ID');
-          const dy = block.getFieldValue('DY');
-          code += `spriteFunctions.changeSpriteY('${spriteIdChangeY}', ${dy});\n`;
-          break;
-        case 'set_sprite_visible':
-          const spriteIdVisible = block.getFieldValue('ID');
-          const visible = block.getFieldValue('VISIBLE') === 'TRUE';
-          code += `spriteFunctions.setVisibility('${spriteIdVisible}', ${visible});\n`;
-          break;
-        case 'get_sprite_x':
-            const idX = block.getFieldValue("ID");
-            code += `sprites['${idX}'] ? sprites['${idX}'].x : 0`;
-            return [code, Blockly.JavaScript.ORDER_ATOMIC];
-        case 'get_sprite_y':
-            const idY = block.getFieldValue("ID");
-            code += `sprites['${idY}'] ? sprites['${idY}'].y : 0`;
-            return [code, Blockly.JavaScript.ORDER_ATOMIC];
-        case 'controls_if':  // Handle standard blocks
-              let n = 0;
-              let conditionCode, branchCode;
-
-              do {
-                conditionCode = generateCodeForBlock(block.getInputTargetBlock('IF' + n)) || 'false';
-                branchCode = generateCodeForBlock(block.getInputTargetBlock('DO' + n)) || '';
-
-                code += (n > 0 ? ' else ' : '') +
-                    'if (' + conditionCode[0] + ') {\n' + branchCode + '}'; //conditionCode[0] is to get rid of the array.
-
-                ++n;
-              } while (block.getInput('IF' + n));
-
-                if (block.getInput('ELSE') || block.hasMutator && block.getInput('ELSE') ) {
-                  branchCode = generateCodeForBlock(block.getInputTargetBlock('ELSE')) || '';
-                  code += ' else {\n' + branchCode + '}';
-                }
-          break;
-        // Add cases for other custom blocks
-        default:
-            if(block.getNextBlock()){
-               code += generateCodeForBlock(block.getNextBlock()); // Chain next statement
+            if (fileUpload.files.length > 0) {
+                const file = fileUpload.files[0];
+                jsonString = await readFileAsText(file);
+            } else if (textInput.value.trim() !== "") {
+                jsonString = textInput.value;
+            } else {
+                alert("Please input JSON either via file upload or in the text area.");
+                return;
             }
-          console.warn('Unhandled block type:', block.type);
-      }
-        if(block.getNextBlock() && (block.type != 'controls_if' && block.type != 'get_sprite_x' && block.type != 'get_sprite_y') ){ //Handle the next block, except for flow control, as that is handled in the switch.
-            code += generateCodeForBlock(block.getNextBlock()); // Chain next statement
+
+            try {
+                const svgElement = pathGenerator.generateSvgPathElementFromJson(jsonString);
+                svgOutputDiv.innerHTML = svgElement; // Set SVG element to the div
+                svgCodeTextarea.value = svgElement;    // Set SVG code to textarea
+            } catch (error) {
+                console.error("Error generating SVG:", error);
+                alert("Error generating SVG path. Please check the JSON input.");
+                svgOutputDiv.innerHTML = '<p style="color:red;">Error displaying SVG. Check console for details.</p>';
+                svgCodeTextarea.value = "Error generating SVG. See console.";
+            }
         }
 
-
-      return code;
-    }
-
-
-    async function loadExtension() {
-      try {
-        const spriteExt = generator(Blockly);
-
-        // Register blocks ONLY (no generators here)
-        if (spriteExt.blocks) {
-          for (const blockDef of spriteExt.blocks) {
-            Blockly.Blocks[blockDef.type] = {
-              init: function() { this.jsonInit(blockDef); }
-            };
-          }
-        }
-
-        // --- Update Toolbox ---
-        if (spriteExt.blocks) {
-          const toolbox = document.getElementById('toolbox');
-          const spriteCategory = toolbox.querySelector('category[name="Sprites"]');
-          if (spriteCategory) {
-            spriteExt.blocks.forEach(blockDef => {
-              const blockElement = document.createElement('block');
-              blockElement.setAttribute('type', blockDef.type);
-              spriteCategory.appendChild(blockElement);
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
             });
-            workspace.updateToolbox(toolbox);
-          }
         }
-
-        if (spriteExt.init) {
-          spriteExt.init(workspace);
-        }
-      } catch (error) {
-        console.error('Failed to load extension:', error);
-      }
-    }
-
-    function init() {
-      setupConsoleCapture();
-      setupRunButton();
-      setupClearButton();
-      initBlockly();
-    }
-
-    init();
-  </script>
+    </script>
 </body>
 </html>
