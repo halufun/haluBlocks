@@ -59,7 +59,9 @@
             }
 
             try {
-                const svgElement = pathGenerator.generateSvgPathElementFromJson(jsonString);
+                const path = pathGenerator.generateSvgPathElementFromJson(jsonString);
+                const svgElement = document.createElement("svg");
+                svgElement.innerHTML = path;
                 svgOutputDiv.innerHTML = svgElement; // Set SVG element to the div
                 svgCodeTextarea.value = svgElement;    // Set SVG code to textarea
             } catch (error) {
