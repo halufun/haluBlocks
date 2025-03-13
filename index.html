@@ -60,7 +60,7 @@
 
             try {
                 const path = pathGenerator.generateSvgPathElementFromJson(jsonString);
-                const svgElement = document.createElement("svg");
+                const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svgElement.innerHTML = path;
                 svgOutputDiv.innerHTML = svgElement; // Set SVG element to the div
                 svgCodeTextarea.value = svgElement;    // Set SVG code to textarea
