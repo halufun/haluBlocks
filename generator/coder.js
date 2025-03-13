@@ -1,4 +1,3 @@
-
 /**
  * SVG Path Generator - Properties in JSON, Corner Radius per Point
  */
@@ -230,49 +229,7 @@ class SVGPathGenerator {
 
 }
 
-
-// Example usage with JSON defining properties:
-const pathDefinitionJson = `{
-  "points": [
-    { "x": 10, "y": 10, "cornerRadius": 5 },
-    { "x": 100, "y": 10 },
-    { "x": 100, "y": 100, "cornerRadius": 15 },
-    { "x": 10, "y": 100 }
-  ],
-  "stroke": "purple",
-  "fill": "rgba(200, 200, 255, 0.7)",
-  "stroke-width": 3,
-  "stroke-dasharray": "5 5",
-  "closePath": true
-}`;
-
-const generator = new SVGPathGenerator({ defaultCornerRadius: 10 }); // Default corner radius still available
-const svgPathElementFromJson = generator.generateSvgPathElementFromJson(pathDefinitionJson);
-console.log("Generated SVG Path Element (from JSON with properties):", svgPathElementFromJson);
-
-
-// Example without corner radius, with different JSON properties
-const pathDefinitionNoRadiusJson = `{
-  "points": [
-    { "x": 20, "y": 20 },
-    { "x": 150, "y": 30 },
-    { "x": 120, "y": 120 },
-    { "x": 30, "y": 110 }
-  ],
-  "fill": "orange",
-  "stroke": "darkorange",
-  "stroke-width": 2
-}`;
-
-const generatorNoRadius = new SVGPathGenerator(); // No default corner radius
-const svgPathElementNoRadiusJson = generatorNoRadius.generateSvgPathElementFromJson(pathDefinitionNoRadiusJson);
-console.log("Generated SVG Path Element (no radius, from JSON with properties):", svgPathElementNoRadiusJson);
-
-
-// Decoder Example (still works on 'd' attribute - extract 'd' from the generated element if needed)
-const decoder = new SVGPathGenerator();
-const pathStringForDecoding = JSON.parse(pathDefinitionJson).points; // Example: Extract points to regenerate 'd'
-const dAttributeOnly = generator.pointsToPath(pathStringForDecoding); // Generate 'd' attribute
-const decodedPointsJson = decoder.svgPathStringToJsonPoints(JSON.stringify(dAttributeOnly));
-console.log("Decoded Points (to JSON, from 'd' attribute):", decodedPointsJson);
-console.log("Decoded Points (parsed from JSON):", JSON.parse(decodedPointsJson));
+// Export the class if you are using modules
+// if (typeof module !== 'undefined' && module.exports) {
+//   module.exports = SVGPathGenerator;
+// }
