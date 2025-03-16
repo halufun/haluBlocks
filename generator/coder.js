@@ -8,79 +8,91 @@ class SVGPathGenerator {
         this.defaultFill = options.fill || 'none';
     }
 
-    createRoundedPath(coords, defaultRadius, close) {
-        if (!coords || coords.length === 0) {
-            return "";
-        }
+    function createRoundedPath(coords, defaultRadius, close) {
+    let pathData = "";
 
-        let path = "";
-        const len = coords.length;
-
-        const closedCoords = close ? [...coords, coords[0]] : coords;
-        const closedLen = closedCoords.length;
-
-        for (let i = 0; i < (close ? len : closedLen); i++) {
-            const current = closedCoords[i];
-            const prev = closedCoords[(i - 1 + closedLen) % closedLen];
-            const next = closedCoords[(i + 1) % closedLen];
-
-            const radius = current.cornerRadius !== undefined ? current.cornerRadius : defaultRadius;
-
-            if (i === 0) {
-                path += `M ${current.x},${current.y} `;
-            } else {
-                const prevDx = current.x - prev.x;
-                const prevDy = current.y - prev.y;
-                const nextDx = next.x - current.x;
-                const nextDy = next.y - current.y;
-
-                const prevDist = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
-                const nextDist = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
-
-                const actualRadius = Math.min(radius, prevDist / 2, nextDist / 2);
-
-                const control1X = current.x - (prevDx / prevDist) * actualRadius;
-                const control1Y = current.y - (prevDy / prevDist) * actualRadius;
-                const control2X = current.x + (nextDx / nextDist) * actualRadius;
-                const control2Y = current.y + (nextDy / nextDist) * actualRadius;
-                // Input Validation and Logging
-                const valuesToCheck = [
-                    current.x, current.y, prev.x, prev.y, next.x, next.y,
-                    radius, actualRadius, prevDx, prevDy, prevDist,
-                    nextDx, nextDy, nextDist, control1X, control1Y,
-                    control2X, control2Y
-                ];
-                const valueNames = [
-                    "current.x", "current.y", "prev.x", "prev.y", "next.x", "next.y",
-                    "radius", "actualRadius", "prevDx", "prevDy", "prevDist",
-                    "nextDx", "nextDy", "nextDist", "control1X", "control1Y",
-                    "control2X", "control2Y"
-                ];
-
-                for (let j = 0; j < valuesToCheck.length; j++) {
-                    const value = valuesToCheck[j];
-                    const valueName = valueNames[j];
-
-                   if (typeof value !== 'number' && (typeof value !== "string" || !/^[a-zA-Z]+$/.test(value))) {
-                        if (typeof value === 'string' ) continue;
-                         console.error(`Invalid input detected at point ${i} (original index: ${i % len}) for ${valueName}:`, value);
-                    }
-                }
-                if (i === 1 && !close) {
-                    path = `M ${control1X},${control1Y} `;
-                }
-                else {
-                    path += `L ${control1X},${control1Y} `;
-                }
-                path += `C ${current.x},${current.y} ${current.x},${current.y} ${control2X},${control2Y} `;
-            }
-        }
-
-        if (close) {
-            path += "Z";
-        }
-        return path;
+    if (!coords || coords.length < 2) {
+        return ""; // Need at least two points to draw a path
     }
+
+    // Helper function to calculate control points for rounded corners
+    function calculateControlPoints(p0, p1, p2, radius) {
+        // Vectors between points
+        const v1 = { x: p0.x - p1.x, y: p0.y - p1.y };
+        const v2 = { x: p2.x - p1.x, y: p2.y - p1.y };
+
+        // Length of vectors
+        const lenV1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const lenV2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+        // Normalize vectors
+        const normV1 = { x: v1.x / lenV1, y: v1.y / lenV1 };
+        const normV2 = { x: v2.x / lenV2, y: v2.y / lenV2 };
+
+        // Angle between vectors
+        const angle = Math.acos(normV1.x * normV2.x + normV1.y * normV2.y);
+
+        // Radius cannot be greater than half the distance to the closest point
+        const maxRadius = Math.min(lenV1 / 2, lenV2 / 2);
+        const actualRadius = Math.min(radius, maxRadius);
+
+        // Distance to move along each vector for control points
+        const dist = actualRadius / Math.tan(angle / 2);
+
+        // Control points
+        const c1 = { x: p1.x + normV1.x * dist, y: p1.y + normV1.y * dist };
+        const c2 = { x: p1.x + normV2.x * dist, y: p1.y + normV2.y * dist };
+
+        return { c1, c2, actualRadius };
+    }
+
+    // Start the path
+    pathData += `M${coords[0].x},${coords[0].y} `;
+
+    // Iterate through points, handling rounded corners
+    for (let i = 0; i < coords.length - 1; i++) {
+        const p0 = coords[i - 1] || (close ? coords[coords.length - 1] : coords[0]);  // Previous point, handling wrap-around for closed paths
+        const p1 = coords[i];     // Current point
+        const p2 = coords[i + 1]; // Next point
+        const radius = p1.cornerRadius !== undefined ? p1.cornerRadius : defaultRadius;
+        
+        if (radius > 0 ) { //if the point is sharp then there is no need for rounded corner
+          // Calculate control points
+          const { c1, c2, actualRadius } = calculateControlPoints(p0, p1, p2, radius);
+  
+          // Draw a straight line to the first control point
+          pathData += `L${c1.x},${c1.y} `;
+  
+          // Draw an arc to the second control point
+          // Use quadratic Bezier curve for smooth corners
+          pathData += `Q${p1.x},${p1.y} ${c2.x},${c2.y} `;
+        } else {
+          pathData += `L ${p1.x} ${p1.y} `;
+        }
+    }
+    
+    //add the last line segment
+    const last = coords.at(-1);
+    const secondLast = coords.at(-2)
+    const start = coords[0]
+    const radius = last.cornerRadius !== undefined ? last.cornerRadius : defaultRadius;
+    if (radius > 0 ) {
+       // Calculate control points
+      const { c1, c2, actualRadius } = calculateControlPoints(secondLast, last, start, radius);
+      // Draw a straight line to the first control point
+      pathData += `L${c1.x},${c1.y} `;
+      pathData += `Q${last.x},${last.y} ${c2.x},${c2.y} `;
+    } else {
+       pathData += `L ${last.x} ${last.y} `;
+    }
+
+    // Close the path if needed
+    if (close) {
+        pathData += "Z";
+    }
+
+    return pathData;
+}
      pointsToPath(points) {
         if (!points || points.length === 0) {
             return "";
