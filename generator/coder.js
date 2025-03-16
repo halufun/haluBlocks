@@ -43,16 +43,28 @@ class SVGPathGenerator {
                 const control1Y = current.y - (prevDy / prevDist) * actualRadius;
                 const control2X = current.x + (nextDx / nextDist) * actualRadius;
                 const control2Y = current.y + (nextDy / nextDist) * actualRadius;
+                // Input Validation and Logging
+                const valuesToCheck = [
+                    current.x, current.y, prev.x, prev.y, next.x, next.y,
+                    radius, actualRadius, prevDx, prevDy, prevDist,
+                    nextDx, nextDy, nextDist, control1X, control1Y,
+                    control2X, control2Y
+                ];
+                const valueNames = [
+                    "current.x", "current.y", "prev.x", "prev.y", "next.x", "next.y",
+                    "radius", "actualRadius", "prevDx", "prevDy", "prevDist",
+                    "nextDx", "nextDy", "nextDist", "control1X", "control1Y",
+                    "control2X", "control2Y"
+                ];
 
-                // NaN Check and Logging
-                if (isNaN(control1X) || isNaN(control1Y) || isNaN(control2X) || isNaN(control2Y)) {
-                    console.error(`NaN detected at point ${i} (original index: ${i % len}).`);
-                    console.log("  prev:", prev, "current:", current, "next:", next);
-                    console.log("  radius:", radius, "actualRadius:", actualRadius);
-                    console.log("  prevDx:", prevDx, "prevDy:", prevDy, "prevDist:", prevDist);
-                    console.log("  nextDx:", nextDx, "nextDy:", nextDy, "nextDist:", nextDist);
-                    console.log("  control1X:", control1X, "control1Y:", control1Y);
-                    console.log("  control2X:", control2X, "control2Y:", control2Y);
+                for (let j = 0; j < valuesToCheck.length; j++) {
+                    const value = valuesToCheck[j];
+                    const valueName = valueNames[j];
+
+                   if (typeof value !== 'number' && (typeof value !== "string" || !/^[a-zA-Z]+$/.test(value))) {
+                        if (typeof value === 'string' ) continue;
+                         console.error(`Invalid input detected at point ${i} (original index: ${i % len}) for ${valueName}:`, value);
+                    }
                 }
                 if (i === 1 && !close) {
                     path = `M ${control1X},${control1Y} `;
@@ -69,9 +81,7 @@ class SVGPathGenerator {
         }
         return path;
     }
-
-
-    pointsToPath(points) {
+     pointsToPath(points) {
         if (!points || points.length === 0) {
             return "";
         }
