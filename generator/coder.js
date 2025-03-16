@@ -44,7 +44,6 @@ class SVGPathGenerator {
             const prev = coords[(i - 1 + len) % len];  // Wrap for previous
 
             const radius = curr.cornerRadius !== undefined ? curr.cornerRadius : defaultRadius;
-
             // Calculate distances to next and previous points
             const distToNext = Math.hypot(next.x - curr.x, next.y - curr.y);
             const distToPrev = Math.hypot(curr.x - prev.x, curr.y - prev.y);
@@ -52,6 +51,7 @@ class SVGPathGenerator {
             // Calculate the maximum allowed "t" values for the curves
             const tNext = Math.min(radius / distToNext, 0.5);
             const tPrev = Math.min(radius / distToPrev, 0.5);
+            // console.log(`tNext = ${tNext}, tPrev = ${tPrev}, radius=${radius}, distToNext = ${distToNext}, distToPrev = ${distToPrev}`);
 
             // Calculate the points for the curves
             const cp1x = curr.x - (curr.x - prev.x) * tPrev;
@@ -59,18 +59,29 @@ class SVGPathGenerator {
             const cp2x = curr.x + (next.x - curr.x) * tNext;
             const cp2y = curr.y + (next.y - curr.y) * tNext;
 
-
             if (i === 0) {
                 // Start the path at the first point, adjusted for the curve
-                path += `M${cp2x},${cp2y}`;
+                // path += `M${cp2x},${cp2y}`;
+
+                // *Corrected*  Move to the *end* of the *previous* segment, which is the start
+                //  of the curve into the first point.
+                const prevOfFirst = coords[(len - 1) % len]; // wrap around
+                const radiusOfLast = prevOfFirst.cornerRadius !== undefined ? prevOfFirst.cornerRadius : defaultRadius
+                const distToPrevOfFirst = Math.hypot(curr.x - prevOfFirst.x, curr.y - prevOfFirst.y);
+                const tPrevOfFirst = Math.min(radiusOfLast / distToPrevOfFirst, 0.5);
+
+                const startX = curr.x - (curr.x - prevOfFirst.x) * tPrevOfFirst;
+                const startY = curr.y - (curr.y - prevOfFirst.y) * tPrevOfFirst;
+                path += `M${startX},${startY}`;
+
             } else {
                 // Add a cubic Bezier curve
                 path += `C${cp1x},${cp1y} ${curr.x},${curr.y} ${cp2x},${cp2y}`;
             }
-            if (i < coords.length-1 || close) {
-                // If not the last point and not closed go to next point, or
-                // close == true and we need to draw to next coordinate (first in array).
-                path += `L${next.x - (next.x - curr.x) * tNext},${next.y - (next.y - curr.y) * tNext}`
+
+            // Draw a line segment to the *beginning* of the *next* curve.
+            if (i < len - 1 || close) {
+                path += `L${next.x - (next.x - curr.x) * tNext},${next.y - (next.y - curr.y) * tNext}`;
             }
         }
 
@@ -103,12 +114,12 @@ class SVGPathGenerator {
         const coords = points.map(p => ({
             x: p[xKey],
             y: p[yKey],
-            cornerRadius: p.cornerRadius // Keep cornerRadius!
+            cornerRadius: p['corner-radius'] !== undefined ? p['corner-radius'] : p.cornerRadius// Keep cornerRadius!
         }));
 
 
         // Use the cornerRadius from the first point as the *default* if provided.
-        const defaultRadius = points[0].cornerRadius !== undefined ? points[0].cornerRadius : this.defaultCornerRadius;
+        const defaultRadius = coords[0].cornerRadius !== undefined ? coords[0].cornerRadius : this.defaultCornerRadius;
         return this.createRoundedPath(coords, defaultRadius, this.closePath);
     }
 
