@@ -1,96 +1,152 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SVG Path Generator</title>
+    <title>SVG Shape Generator</title>
     <style>
         body { font-family: sans-serif; }
-        textarea { width: 100%; height: 150px; box-sizing: border-box; margin-bottom: 10px; }
-        #svgOutput { border: 1px solid #ccc; margin-bottom: 10px; display: block; }
-        #svgCodeOutput { width: 100%; height: 100px; box-sizing: border-box; font-family: monospace; font-size: 12px; }
-        .input-section { margin-bottom: 20px; }
-        .svg-container { width: 400px; height: 300px; border: 1px solid #ddd; margin-bottom: 10px; }
-        .svg-container svg { width: 100%; height: 100%; }
+        textarea { width: 98%; height: 150px; margin-bottom: 10px; }
+        button { padding: 10px 20px; cursor: pointer; }
+        #svg-container { border: 1px solid #ccc; margin-top: 20px; width: 100%; height: auto; display: block; }
+        #svg-output { width: 100%; height: auto; display: block; }
     </style>
 </head>
 <body>
-    <h1>SVG Path Generator</h1>
+    <h1>SVG Shape Generator</h1>
+	<p> example:</p><br>
+	<p>{<br>
+  "points": [<br>
+    {"x": 0, "y": 0, "cornerRadius": 0.5},<br>
+    {"x": 1.25, "y": 0, "cornerRadius": 0.25},<br>
+    {"x": 2, "y": 0.75, "cornerRadius": 0.25},<br>
+    {"x": 4, "y": 0.75, "cornerRadius": 0.25},<br>
+    {"x": 4.75, "y": 0, "cornerRadius": 0.25},<br>
+    {"x": 15, "y": 0, "cornerRadius": 0.5},<br>
+    {"x": 15, "y": 8, "cornerRadius": 0.5},<br>
+    {"x": 0, "y": 8, "cornerRadius": 0.5}<br>
+  ],<br>
+  "fill": "lightblue",<br>
+  "stroke": "navy",<br>
+  "stroke-width": 0.5,<br>
+  "stroke-linejoin": "round",<br>
+  "closePath": true<br>
+}</p>
 
-    <div class="input-section">
-        <h2>Input JSON from File</h2>
-        <input type="file" id="jsonFileUpload" accept=".json">
+    <label for="jsonInput">Paste your JSON data here:</label><br>
+    <textarea id="jsonInput" v='Example JSON:\n{\n  "points": [\n    { "x": 0, "y": 0, "cornerRadius": 5 },\n    { "x": 10, "y": 0 },\n    { "x": 15, "y": 5, "cornerRadius": 30 },\n    { "x": 30, "y": 5 },\n    { "x": 35, "y": 0, "cornerRadius": 300 },\n    { "x": 100, "y": 0 },\n    { "x": 100, "y": 40 },\n    { "x": 35, "y": 40 },\n    { "x": 30, "y": 45 },\n    { "x": 15, "y": 45 },\n    { "x": 10, "y": 40 },\n    { "x": 0, "y": 40 },\n    { "x": 0, "y": 0 }\n  ],\n  "stroke": "navy",\n  "fill": "lightblue",\n  "stroke-width": 3,\n  "stroke-linejoin": "round",\n  "opacity": 0.8,\n  "class": "my-custom-path",\n  "id": "testPathElement",\n  "closePath": true\n}'></textarea><br>
+
+    <button id="generateButton">Generate SVG Shape</button>
+
+    <h2>Generated SVG:</h2>
+    <div id="svg-container">
+        <svg id="svg-output" viewBox="0 0 120 60"></svg>
     </div>
 
-    <div class="input-section">
-        <h2>Input JSON Manually</h2>
-        <textarea id="jsonTextInput" placeholder='Enter JSON here...'></textarea>
-    </div>
-
-    <button onclick="generatePath()">Generate SVG Path</button>
-
-    <div class="svg-container">
-        <h2>SVG Output</h2>
-        <div id="svgOutput">
-            <!-- SVG Path will be displayed here -->
-        </div>
-    </div>
-
-    <h2>SVG Code</h2>
-    <textarea id="svgCodeOutput" readonly placeholder="Generated SVG code will appear here"></textarea>
-
-    <script src="./generator/coder.js"></script>
     <script>
-        const pathGenerator = new SVGPathGenerator(); // Instantiate the class
+        document.getElementById('generateButton').addEventListener('click', function() {
+            const jsonText = document.getElementById('jsonInput').value;
+            const svgContainer = document.getElementById('svg-container');
+            const svgOutput = document.getElementById('svg-output');
 
-        async function generatePath() {
-            let jsonString = "";
-            const fileUpload = document.getElementById('jsonFileUpload');
-            const textInput = document.getElementById('jsonTextInput');
-            const svgOutputDiv = document.getElementById('svgOutput');
-            const svgCodeTextarea = document.getElementById('svgCodeOutput');
+            try {
+                const jsonData = JSON.parse(jsonText);
+                generateSvgShape(jsonData, svgOutput, svgContainer);
+            } catch (e) {
+                svgContainer.innerHTML = `<p style="color: red;">Error parsing JSON: ${e.message}</p>`;
+                console.error("JSON Parsing Error:", e);
+                svgOutput.innerHTML = '';
+            }
+        });
 
-            if (fileUpload.files.length > 0) {
-                const file = fileUpload.files[0];
-                jsonString = await readFileAsText(file);
-            } else if (textInput.value.trim() !== "") {
-                jsonString = textInput.value;
-            } else {
-                alert("Please input JSON either via file upload or in the text area.");
+        function generateSvgShape(shapeData, svgElement, errorContainer) {
+            svgElement.innerHTML = '';
+
+            if (!shapeData.points || !Array.isArray(shapeData.points) || shapeData.points.length < 2) {
+                errorContainer.innerHTML = `<p style="color: orange;">Invalid point data in JSON.</p>`;
                 return;
             }
 
-            try {
-                const path = pathGenerator.generateSvgPathElementFromJson(jsonString);
-                const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svgElement.innerHTML = path;
-                svgOutputDiv.innerHTML = ""; // Clear previous content (important!)
-                svgOutputDiv.appendChild(svgElement); // Append the SVG element to the div (better practice)
-                svgCodeTextarea.value = svgElement.outerHTML; // Get the SVG code as a string
-            } catch (error) {
-                console.error("Error generating SVG:", error);
-                alert("Error generating SVG path. Please check the JSON input.");
-                svgOutputDiv.innerHTML = '<p style="color:red;">Error displaying SVG. Check console for details.</p>';
-                svgCodeTextarea.value = "Error generating SVG. See console.";
-            }
-        }
+            const path = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+            let d = "";
+            const points = shapeData.points;
+            const numPoints = points.length;
+            const defaultCornerRadius = 0;
+            const bezierControlPointFactor = 0.55;
 
-        function readFileAsText(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(reader.error);
-                reader.readAsText(file);
-            });
+            const getVector = (p1, p2) => ({ x: p2.x - p1.x, y: p2.y - p1.y });
+            const getLength = (v) => Math.sqrt(v.x * v.x + v.y * v.y);
+            const normalize = (v) => {
+                const len = getLength(v);
+                return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
+            };
+            const scaleVector = (v, scalar) => ({ x: v.x * scalar, y: v.y * scalar });
+            const addVectors = (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y });
+
+            d += `M ${points[0].x},${points[0].y} `;
+
+            for (let i = 0; i < numPoints; i++) {
+                const currentPoint = points[i];
+                const prevPoint = points[(i - 1 + numPoints) % numPoints];
+                const nextPoint = points[(i + 1) % numPoints];
+                const cornerRadius = currentPoint.cornerRadius !== undefined ? Math.max(0, currentPoint.cornerRadius) : defaultCornerRadius;
+
+                if (cornerRadius <= 0) {
+                    if (i > 0) {
+                        d += `L ${currentPoint.x},${currentPoint.y} `;
+                    }
+                } else {
+                    const vectorPrev = getVector(prevPoint, currentPoint);
+                    const vectorNext = getVector(currentPoint, nextPoint);
+
+                    const lenPrev = getLength(vectorPrev);
+                    const lenNext = getLength(vectorNext);
+
+                    const normalizedPrev = normalize(vectorPrev);
+                    const normalizedNext = normalize(vectorNext);
+
+                    const limitedRadius = Math.min(cornerRadius, lenPrev / 2, lenNext / 2);
+
+                    const startTangentPoint = addVectors(currentPoint, scaleVector(normalizedPrev, -limitedRadius));
+                    const endTangentPoint = addVectors(currentPoint, scaleVector(normalizedNext, limitedRadius));
+
+                    if (i > 0) {
+                        d += `L ${startTangentPoint.x},${startTangentPoint.y} `;
+                    } else {
+                        d = `M ${startTangentPoint.x},${startTangentPoint.y} `;
+                    }
+
+                    // Control points moved to the other side of the tangent
+                    const controlPoint1 = addVectors(startTangentPoint, scaleVector(normalize(getVector(startTangentPoint, currentPoint)), limitedRadius * bezierControlPointFactor));
+                    const controlPoint2 = addVectors(endTangentPoint, scaleVector(normalize(getVector(endTangentPoint, currentPoint)), limitedRadius * bezierControlPointFactor));
+
+
+                    d += `C ${controlPoint1.x},${controlPoint1.y} ${controlPoint2.x},${controlPoint2.y} ${endTangentPoint.x},${endTangentPoint.y} `;
+                }
+            }
+
+            if (shapeData.closePath !== false) {
+                d += "Z";
+            }
+
+            path.setAttribute('d', d);
+
+            for (const key in shapeData) {
+                if (key !== 'points' && shapeData.hasOwnProperty(key)) {
+                    path.setAttribute(key, shapeData[key]);
+                }
+            }
+
+            svgElement.appendChild(path);
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const pt of points) {
+                minX = Math.min(minX, pt.x);
+                minY = Math.min(minY, pt.y);
+                maxX = Math.max(maxX, pt.x);
+                maxY = Math.max(maxY, pt.y);
+            }
+            const padding = 2;
+            svgElement.setAttribute('viewBox', `${minX - padding} ${minY - padding} ${maxX - minX + 2 * padding} ${maxY - minY + 2 * padding}`);
         }
-    </script>
-    <script>
-        (function() {
-    var script = document.createElement('script');
-    script.src = "//cdn.jsdelivr.net/npm/eruda";
-    document.body.appendChild(script);
-    script.onload = function() {
-        eruda.init()
-    }
-})();
     </script>
 </body>
 </html>
