@@ -1,5 +1,3 @@
---- START OF FILE coder.js.txt ---
-
 class SVGPathGenerator {
     /**
      * Constructor. Options are now less critical as JSON defines properties,
