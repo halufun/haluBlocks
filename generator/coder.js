@@ -43,7 +43,8 @@ class SVGPathGenerator {
             const prev = coords[(i - 1 + len) % len]; // Wrap around for previous point
             const next = coords[(i + 1) % len];       // Wrap around for next point
 
-            const radius = current.cornerRadius !== undefined ? current.cornerRadius : defaultRadius;
+            let radius = current.cornerRadius !== undefined ? current.cornerRadius : defaultRadius;
+            radius = Math.max(0, radius); // Ensure radius is not negative
 
             if (i === 0) {
                 path += `M ${current.x},${current.y} `;
@@ -57,26 +58,38 @@ class SVGPathGenerator {
                 const prevDist = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
                 const nextDist = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
 
+                // Handle cases where distances are zero (points are coincident)
+                const prevDistNonZero = prevDist === 0 ? 1 : prevDist;  // Avoid division by zero
+                const nextDistNonZero = nextDist === 0 ? 1 : nextDist;
+
                 const actualRadius = Math.min(radius, prevDist / 2, nextDist / 2);
 
-
-                const control1X = current.x - (prevDx / prevDist) * actualRadius;
-                const control1Y = current.y - (prevDy / prevDist) * actualRadius;
-                const control2X = current.x + (nextDx / nextDist) * actualRadius;
-                const control2Y = current.y + (nextDy / nextDist) * actualRadius;
+                //If distances are 0, do not apply radius
+                const control1X = prevDist === 0 ? current.x : current.x - (prevDx / prevDistNonZero) * actualRadius;
+                const control1Y = prevDist === 0 ? current.y : current.y - (prevDy / prevDistNonZero) * actualRadius;
+                const control2X = nextDist === 0 ? current.x : current.x + (nextDx / nextDistNonZero) * actualRadius;
+                const control2Y = nextDist === 0 ? current.y : current.y + (nextDy / nextDistNonZero) * actualRadius;
 
 
                 //  Line to the start of the curve.
                 if (i === 1) {
                     path = `M ${control1X},${control1Y} `;
-                }
-                else {
+                } else {
                     path += `L ${control1X},${control1Y} `;
                 }
 
-
-                // Cubic Bezier curve
-                path += `C ${current.x},${current.y} ${current.x},${current.y} ${control2X},${control2Y} `;
+                // Cubic Bezier curve:  Handle zero radius explicitly
+                if (actualRadius === 0) {
+                   path += `L ${next.x},${next.y} `; // No curve, just a straight line
+                   i++; // Correctly advance 'i' for next iteration
+                   if(i < len){
+                       const afterNext = coords[(i + 1) % len];
+                       path += `M ${afterNext.x},${afterNext.y} `;
+                   }
+                }
+                else{
+                   path += `C ${current.x},${current.y} ${current.x},${current.y} ${control2X},${control2Y} `;
+                }
             }
         }
 
