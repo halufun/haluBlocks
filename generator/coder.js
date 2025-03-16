@@ -31,7 +31,7 @@ class SVGPathGenerator {
      * @returns {string} The SVG path 'd' attribute string.
      */
     createRoundedPath(coords, defaultRadius, close) {
-        if (!coords || coords.length < 2) {  // Need at least 2 points to draw a line
+        if (!coords || coords.length === 0) {
             return "";
         }
 
@@ -39,56 +39,50 @@ class SVGPathGenerator {
         const len = coords.length;
 
         for (let i = 0; i < len; i++) {
-            const curr = coords[i];
-            const next = coords[(i + 1) % len]; // Wrap around for closing
-            const prev = coords[(i - 1 + len) % len];  // Wrap for previous
+            const current = coords[i];
+            const prev = coords[(i - 1 + len) % len]; // Wrap around for previous point
+            const next = coords[(i + 1) % len];       // Wrap around for next point
 
-            const radius = curr.cornerRadius !== undefined ? curr.cornerRadius : defaultRadius;
-            // Calculate distances to next and previous points
-            const distToNext = Math.hypot(next.x - curr.x, next.y - curr.y);
-            const distToPrev = Math.hypot(curr.x - prev.x, curr.y - prev.y);
-
-            // Calculate the maximum allowed "t" values for the curves
-            const tNext = Math.min(radius / distToNext, 0.5);
-            const tPrev = Math.min(radius / distToPrev, 0.5);
-            // console.log(`tNext = ${tNext}, tPrev = ${tPrev}, radius=${radius}, distToNext = ${distToNext}, distToPrev = ${distToPrev}`);
-
-            // Calculate the points for the curves
-            const cp1x = curr.x - (curr.x - prev.x) * tPrev;
-            const cp1y = curr.y - (curr.y - prev.y) * tPrev;
-            const cp2x = curr.x + (next.x - curr.x) * tNext;
-            const cp2y = curr.y + (next.y - curr.y) * tNext;
+            const radius = current.cornerRadius !== undefined ? current.cornerRadius : defaultRadius;
 
             if (i === 0) {
-                // Start the path at the first point, adjusted for the curve
-                // path += `M${cp2x},${cp2y}`;
-
-                // *Corrected*  Move to the *end* of the *previous* segment, which is the start
-                //  of the curve into the first point.
-                const prevOfFirst = coords[(len - 1) % len]; // wrap around
-                const radiusOfLast = prevOfFirst.cornerRadius !== undefined ? prevOfFirst.cornerRadius : defaultRadius
-                const distToPrevOfFirst = Math.hypot(curr.x - prevOfFirst.x, curr.y - prevOfFirst.y);
-                const tPrevOfFirst = Math.min(radiusOfLast / distToPrevOfFirst, 0.5);
-
-                const startX = curr.x - (curr.x - prevOfFirst.x) * tPrevOfFirst;
-                const startY = curr.y - (curr.y - prevOfFirst.y) * tPrevOfFirst;
-                path += `M${startX},${startY}`;
-
+                path += `M ${current.x},${current.y} `;
             } else {
-                // Add a cubic Bezier curve
-                path += `C${cp1x},${cp1y} ${curr.x},${curr.y} ${cp2x},${cp2y}`;
-            }
+                // Calculate control points for the curve
+                const prevDx = current.x - prev.x;
+                const prevDy = current.y - prev.y;
+                const nextDx = next.x - current.x;
+                const nextDy = next.y - current.y;
 
-            // Draw a line segment to the *beginning* of the *next* curve.
-            if (i < len - 1 || close) {
-                path += `L${next.x - (next.x - curr.x) * tNext},${next.y - (next.y - curr.y) * tNext}`;
+                const prevDist = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
+                const nextDist = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
+
+                const actualRadius = Math.min(radius, prevDist / 2, nextDist / 2);
+
+
+                const control1X = current.x - (prevDx / prevDist) * actualRadius;
+                const control1Y = current.y - (prevDy / prevDist) * actualRadius;
+                const control2X = current.x + (nextDx / nextDist) * actualRadius;
+                const control2Y = current.y + (nextDy / nextDist) * actualRadius;
+
+
+                //  Line to the start of the curve.
+                if (i === 1) {
+                    path = `M ${control1X},${control1Y} `;
+                }
+                else {
+                    path += `L ${control1X},${control1Y} `;
+                }
+
+
+                // Cubic Bezier curve
+                path += `C ${current.x},${current.y} ${current.x},${current.y} ${control2X},${control2Y} `;
             }
         }
 
         if (close) {
-            path += "Z"; // Close the path
+            path += "Z";
         }
-
         return path;
     }
 
