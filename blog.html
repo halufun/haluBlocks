@@ -9,7 +9,8 @@
         margin-left: 5%;
         margin-right: 5%;
         border-radius: 30px;
-        background-color: efefef;
+        background-color: efefef11;
+        backdrop-filter: blur(10px);
       }
       h2 {
         text-align: center;
@@ -38,39 +39,9 @@
       body {
         margin: 0;
       }
-
-      /* parallax "viewport" */
-      .parallax {
-      height: 100vh;
-
-      overflow-x: hidden;
-      overflow-y: auto;
-
-      perspective: 1px;
-      }
-
-      .parallax-layer {
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-      }
-
-      .layer1 {
-        transform: translateZ(0);
-      }
-
-      .layer2 {
-        transform: translateZ(-1px);
-      }
-
-      .layer3 {
-        transform: translateZ(-2px);
-      }
     </style>
-    <div class="parallax">
-    <div id="content" class="layer1">
+    <img style="z-index: 0; overflow: fixed;" src="https://media.istockphoto.com/id/537331500/photo/programming-code-abstract-technology-background-of-software-deve.jpg?s=612x612&w=0&k=20&c=jlYes8ZfnCmD0lLn-vKvzQoKXrWaEcVypHnB5MuO-g8="/>
+    <div id="content">
       <h2 class="layer2">Opinion</h2>
       <p>This project is a recreation of scratch. I am working on this because I feel like scratch doesn't authentically teach all coding concepts it could.</p><br>
       <p>The aim of the project is to provide a simple interface without restricting developers.</p><br>
@@ -86,7 +57,6 @@
       <p>-</p><br>
       <p>-</p><br>
       <p>-</p><br>
-    </div>
     </div>
   </body>
 </html>
